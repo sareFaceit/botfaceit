@@ -10359,4 +10359,8 @@ if __name__ == "__main__":
     print("🗑️ Запуск авто-удаления сообщений...")
     threading.Thread(target=_auto_delete_loop, daemon=True).start()
     print(f"✅ Бот запущен! ADMIN_CHAT_ID={ADMIN_CHAT_ID} | ADMIN_IDS={ADMIN_IDS_LIST}")
+    try:
+        bot.delete_webhook(drop_pending_updates=True)
+    except Exception:
+        pass
     bot.infinity_polling(timeout=60, long_polling_timeout=30)
