@@ -109,6 +109,19 @@ def generate_profile_card(
     active_background=None,
     **_kw,
 ) -> io.BytesIO:
+    # Encode avatar bytes inside leaderboard entries so server can decode them
+    lb_encoded = None
+    if leaderboard:
+        lb_encoded = []
+        for entry in leaderboard:
+            if isinstance(entry, dict):
+                e = dict(entry)
+                if isinstance(e.get("avatar"), (bytes, bytearray)):
+                    e["avatar"] = _b64(e["avatar"])
+                lb_encoded.append(e)
+            else:
+                lb_encoded.append(entry)
+
     payload = {
         "username":         username,
         "game_id":          game_id,
@@ -125,7 +138,7 @@ def generate_profile_card(
         "league":           league,
         "map_stats":        map_stats,
         "recent":           recent,
-        "leaderboard":      leaderboard,
+        "leaderboard":      lb_encoded,
         "quals_stats":      quals_stats,
         "mvp_count":        mvp_count,
         "is_verified":      is_verified,

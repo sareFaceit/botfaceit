@@ -3260,10 +3260,19 @@ def cb_profile(c):
             recent      = get_player_recent_matches(uid, limit=5, matches_table=_matches_table)
             quals_stats = get_player_quals_stats(uid, _priv_table)
             duo_stats   = get_player_duo_stats(uid, _priv_table)
-            lb_data     = [
-                (i+1, row[1], row[2], has_active_premium(row[0]), is_admin(row[0]), is_verified_check(row[0]))
-                for i, row in enumerate(all_p[:3])
-            ]
+            lb_data = []
+            for _i, _row in enumerate(all_p[:3]):
+                _av_lb = get_user_avatar(_row[0])
+                lb_data.append({
+                    "rank":       _i + 1,
+                    "name":       _row[1],
+                    "elo":        _row[2],
+                    "is_premium": has_active_premium(_row[0]),
+                    "is_admin":   is_admin(_row[0]),
+                    "is_verified": is_verified_check(_row[0]),
+                    "uid":        _row[0],
+                    "avatar":     _av_lb,
+                })
             mvp_count   = p[31] if len(p) > 31 else 0
 
             avatar_bytes = get_user_avatar(uid)
@@ -3667,7 +3676,9 @@ def cb_top_quals(c):
                 lvl = get_faceit_level(qelo or 1000)
                 lb_players.append({
                     "rank": i, "name": name, "elo": qelo or 1000,
-                    "wins": qw or 0, "losses": ql or 0, "kd": qkd, "level": lvl, "uid": uid2,
+                    "wins": qw or 0, "losses": ql or 0,
+                    "kills": qk or 0, "deaths": qd or 0,
+                    "kd": qkd, "level": lvl, "uid": uid2,
                     "is_premium": has_active_premium(uid2), "is_admin": is_admin(uid2),
                     "is_verified": is_verified_check(uid2),
                 })
