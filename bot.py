@@ -313,20 +313,16 @@ COIN_PACKAGES = [
 
 NUMBER_EMOJI = ["①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩"]
 
+_LEVEL_ELO = [0, 500, 750, 900, 1050, 1200, 1350, 1530, 1750, 2000]
+
 def get_faceit_level(elo: int) -> int:
-    if   elo < 801:  return 1
-    elif elo < 951:  return 2
-    elif elo < 1101: return 3
-    elif elo < 1251: return 4
-    elif elo < 1401: return 5
-    elif elo < 1551: return 6
-    elif elo < 1701: return 7
-    elif elo < 1851: return 8
-    elif elo < 2001: return 9
-    else:            return 10
+    for i in range(9, 0, -1):
+        if elo >= _LEVEL_ELO[i]:
+            return i + 1
+    return 1
 
 def elo_bar(elo: int, lvl: int) -> str:
-    thresholds = [0, 801, 951, 1101, 1251, 1401, 1551, 1701, 1851, 2001, 3000]
+    thresholds = [0, 500, 750, 900, 1050, 1200, 1350, 1530, 1750, 2000, 9999]
     lo = thresholds[max(0, lvl - 1)]
     hi = thresholds[min(lvl, len(thresholds) - 1)]
     pct = (elo - lo) / (hi - lo) if hi > lo else 1.0
@@ -3216,11 +3212,11 @@ def handle_change_flow(msg):
 # ==================== ПРОФИЛЬ ====================
 @bot.callback_query_handler(func=lambda c: c.data == "profile")
 def cb_profile(c):
+    bot.answer_callback_query(c.id)
     uid = c.from_user.id
     p = get_current_player(uid)
     if not p:
         bot.edit_message_text("❌ Ошибка", c.message.chat.id, c.message.message_id)
-        bot.answer_callback_query(c.id)
         return
 
     games   = p[6] + p[7]
@@ -3319,7 +3315,7 @@ def cb_profile(c):
             bot.answer_callback_query(c.id)
             return
         except Exception as e:
-            send_error_log("card_profile (Default)", e)
+            print(f"[card_profile] {e}")
 
     # fallback text profile
     text = (
@@ -3346,10 +3342,10 @@ def cb_profile_quals(c):
     if not has_quals_access(uid):
         bot.answer_callback_query(c.id, "❌ Нет доступа к Quals лиге", show_alert=True)
         return
+    bot.answer_callback_query(c.id)
     _priv_table_q = get_user_table(uid)
     p = get_player_from_table(uid, _priv_table_q) or get_player(uid)
     if not p:
-        bot.answer_callback_query(c.id)
         return
 
     qs = get_player_quals_stats(uid, _priv_table_q)
@@ -3425,7 +3421,7 @@ def cb_profile_quals(c):
             bot.answer_callback_query(c.id)
             return
         except Exception as e:
-            send_error_log("card_profile (Quals)", e)
+            print(f"[card_profile_quals] {e}")
 
     # fallback text
     q_games = q_wins + q_losses
@@ -3445,10 +3441,10 @@ def cb_profile_quals(c):
 # ==================== 2v2 ПРОФИЛЬ ====================
 @bot.callback_query_handler(func=lambda c: c.data == "profile_duo")
 def cb_profile_duo(c):
+    bot.answer_callback_query(c.id)
     uid = c.from_user.id
     p = get_current_player(uid)
     if not p:
-        bot.answer_callback_query(c.id)
         return
 
     _priv_table = get_user_table(uid)
@@ -3527,7 +3523,7 @@ def cb_profile_duo(c):
             bot.answer_callback_query(c.id)
             return
         except Exception as e:
-            send_error_log("card_profile (2v2)", e)
+            print(f"[card_profile_2v2] {e}")
 
     # fallback text
     d_games = d_wins + d_losses
@@ -3570,6 +3566,7 @@ def cb_top(c):
 
 @bot.callback_query_handler(func=lambda c: c.data == "top_default")
 def cb_top_default(c):
+    bot.answer_callback_query(c.id)
     uid = c.from_user.id
     priv_table   = get_user_table(uid)
     priv_display = get_user_private_display(uid)
@@ -3594,7 +3591,8 @@ def cb_top_default(c):
                 lvl = get_faceit_level(elo)
                 lb_players.append({
                     "rank": i, "name": name, "elo": elo, "wins": wins,
-                    "losses": losses, "kd": kd, "level": lvl, "uid": uid2,
+                    "losses": losses, "kills": kills, "deaths": deaths,
+                    "kd": kd, "level": lvl, "uid": uid2,
                     "is_premium": has_active_premium(uid2), "is_admin": is_admin(uid2),
                     "is_verified": is_verified_check(uid2),
                 })
@@ -3642,6 +3640,7 @@ def cb_top_default(c):
 
 @bot.callback_query_handler(func=lambda c: c.data == "top_quals")
 def cb_top_quals(c):
+    bot.answer_callback_query(c.id)
     uid = c.from_user.id
     priv_table   = get_user_table(uid)
     priv_display = get_user_private_display(uid)
@@ -3715,6 +3714,7 @@ def cb_top_quals(c):
 
 @bot.callback_query_handler(func=lambda c: c.data == "top_2v2")
 def cb_top_2v2(c):
+    bot.answer_callback_query(c.id)
     uid = c.from_user.id
     priv_table   = get_user_table(uid)
     priv_display = get_user_private_display(uid)
@@ -6272,11 +6272,13 @@ def _finalize_match(reg_uid, match_key):
                 _s   = all_stats[_uid]
                 _p2  = get_player_from_table(_uid, priv_table) or get_player(_uid)
                 _players_ct.append({
-                    "name":    _p2[1] if _p2 else str(_uid),
-                    "kills":   _s["kills"],
-                    "deaths":  _s["deaths"],
-                    "assists": _s["assists"],
-                    "elo":     _p2[4] if _p2 else 1000,
+                    "name":      _p2[1] if _p2 else str(_uid),
+                    "kills":     _s["kills"],
+                    "deaths":    _s["deaths"],
+                    "assists":   _s["assists"],
+                    "elo":       _p2[4] if _p2 else 1000,
+                    "uid":       _uid,
+                    "elo_delta": _s.get("elo_change", 0),
                 })
             for _uid in team_t:
                 if _uid not in all_stats:
@@ -6284,11 +6286,13 @@ def _finalize_match(reg_uid, match_key):
                 _s   = all_stats[_uid]
                 _p2  = get_player_from_table(_uid, priv_table) or get_player(_uid)
                 _players_t.append({
-                    "name":    _p2[1] if _p2 else str(_uid),
-                    "kills":   _s["kills"],
-                    "deaths":  _s["deaths"],
-                    "assists": _s["assists"],
-                    "elo":     _p2[4] if _p2 else 1000,
+                    "name":      _p2[1] if _p2 else str(_uid),
+                    "kills":     _s["kills"],
+                    "deaths":    _s["deaths"],
+                    "assists":   _s["assists"],
+                    "elo":       _p2[4] if _p2 else 1000,
+                    "uid":       _uid,
+                    "elo_delta": _s.get("elo_change", 0),
                 })
             # Аватары игроков — сначала из кэша, потом из Telegram
             _avatars = {}
