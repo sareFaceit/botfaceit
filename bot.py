@@ -10345,6 +10345,19 @@ def _handle_creator_flow_extended(msg, uid, flow, step):
 
 
 # ==================== ЗАПУСК ====================
+import signal as _signal
+
+def _shutdown(signum, frame):
+    print(f"[SIGTERM] Получен сигнал {signum} — останавливаем бота...")
+    try:
+        bot.stop_polling()
+    except Exception:
+        pass
+    raise SystemExit(0)
+
+_signal.signal(_signal.SIGTERM, _shutdown)
+_signal.signal(_signal.SIGINT,  _shutdown)
+
 if __name__ == "__main__":
     print("🚀 Инициализация БД...")
     init_db()
@@ -10359,8 +10372,15 @@ if __name__ == "__main__":
     print("🗑️ Запуск авто-удаления сообщений...")
     threading.Thread(target=_auto_delete_loop, daemon=True).start()
     print(f"✅ Бот запущен! ADMIN_CHAT_ID={ADMIN_CHAT_ID} | ADMIN_IDS={ADMIN_IDS_LIST}")
-    try:
-        bot.delete_webhook(drop_pending_updates=True)
-    except Exception:
-        pass
-    bot.infinity_polling(timeout=60, long_polling_timeout=30)
+
+    # Даём старому экземпляру время завершиться, затем сбрасываем вебхук
+    time.sleep(3)
+    for _attempt in range(5):
+        try:
+            bot.delete_webhook(drop_pending_updates=True)
+            break
+        except Exception as _e:
+            print(f"[startup] delete_webhook попытка {_attempt+1}: {_e}")
+            time.sleep(3)
+
+    bot.infinity_polling(timeout=60, long_polling_timeout=30, restart_on_change=False)
